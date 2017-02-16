@@ -1,4 +1,5 @@
 #include <application.h>
+#include <usb_talk.h>
 
 // LED instance
 bc_led_t led;
@@ -8,6 +9,11 @@ bc_button_t button;
 
 void application_init(void)
 {
+    //usb_talk_init();
+
+    bc_module_power_init();
+    bc_module_power_led_strip_test();
+
     // Initialize LED
     bc_led_init(&led, BC_GPIO_LED, false, false);
 
