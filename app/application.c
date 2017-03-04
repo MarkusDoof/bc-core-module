@@ -35,18 +35,18 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
     (void) event_param;
 
     bc_module_relay_state_t relay_state = bc_module_relay_get_state(&relay);
+    
+    //Nastav rele na vypnuto
     if (relay_state == BC_MODULE_RELAY_STATE_UNKNOWN) {
-        bc_module_relay_set_state(&relay, true);
+        bc_module_relay_set_state(&relay, false);
     }
     
-    //Pokud podržím button tak roluji na gateway = base
+    //Pokud podržím button tak roluji na gateway = base, pokud jen stisknu tak vyvolám akci dle těla podmínky
     if (event == BC_BUTTON_EVENT_PRESS)
     {
         bc_led_pulse(&led, 100);
         
         static uint16_t event_count = 0;
-        
-        bc_radio_pub_push_button(&event_count);
         
         event_count++;
     }
