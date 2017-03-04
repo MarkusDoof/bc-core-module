@@ -15,6 +15,11 @@ void application_init(void)
     // Initialize button
     bc_button_init(&button, BC_GPIO_BUTTON, BC_GPIO_PULL_DOWN, false);
     bc_button_set_event_handler(&button, button_event_handler, NULL);
+    
+    // Initialize radio
+    bc_radio_init();
+    bc_radio_set_event_handler(radio_event_handler, NULL);
+    bc_radio_listen();
 }
 
 void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
@@ -25,5 +30,19 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
     if (event == BC_BUTTON_EVENT_PRESS)
     {
         bc_led_set_mode(&led, BC_LED_MODE_TOGGLE);
+    }
+}
+
+void radio_event_handler(bc_radio_event_t event, void *event_param)
+{
+    (void) event_param;
+    
+    if (event == BC_RADIO_EVENT_PAIR_SUCCESS)
+    {
+        bc_radio_enrollment_stop();
+        
+        bc_led_pulse(&led, 1000);
+        
+        bc_led_set_mode(&led, BC_LED_MODE_OFF);
     }
 }
