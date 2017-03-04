@@ -1,3 +1,4 @@
+//REMOTE
 #include <application.h>
 
 // LED instance
@@ -38,8 +39,26 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
         bc_module_relay_set_state(&relay, true);
     }
     
+    //Pokud podržím button tak roluji na gateway = base
     if (event == BC_BUTTON_EVENT_PRESS)
     {
-        bc_led_set_mode(&led, BC_LED_MODE_TOGGLE);
+        bc_led_pulse(&led, 100);
+        
+        static uint16_t event_count = 0;
+        
+        bc_radio_pub_push_button(&event_count);
+        
+        event_count++;
     }
+    else if (event == BC_BUTTON_EVENT_HOLD)
+    {
+        bc_radio_enroll_to_gateway();
+        bc_led_pulse(&led, 1000);
+    }
+}
+
+void radio_event_handler(bc_radio_event_t event, void *event_param)
+{
+    (void) event_param;
+    
 }
