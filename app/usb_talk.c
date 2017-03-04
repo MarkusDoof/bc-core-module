@@ -139,11 +139,6 @@ static void usb_talk_process_message(char *message, size_t length)
     
     int token_count = jsmn_parse(&parser, (const char *) message, length, tokens, 16);
     
-//    memset(debug_message, 0, sizeof(debug_message));
-//    snprintf(debug_message, sizeof(debug_message), "message:%s, token count:%d \n", message, token_count);
-//    usb_talk_send_string(debug_message);
-
-    
     if (token_count < 3)
     {
         return;
