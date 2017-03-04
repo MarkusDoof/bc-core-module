@@ -33,11 +33,11 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
     {
         bc_led_pulse(&led, 100);
         
-//        static uint16_t event_count = 0;
-//        
-//        usb_talk_publish_push_button("base/", &event_count);
-//        
-//        event_count++;
+        static uint16_t event_count = 0;
+        
+        bc_radio_pub_push_button(&event_count);
+        
+        event_count++;
     }
     else if (event == BC_BUTTON_EVENT_HOLD)
     {
