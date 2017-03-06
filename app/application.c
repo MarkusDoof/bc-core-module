@@ -27,6 +27,11 @@ void application_init(void)
     
     //Inicialize relay
     bc_module_relay_init(&relay);
+    //Nastav rele na vypnuto
+    bc_module_relay_state_t relay_state = bc_module_relay_get_state(&relay);
+    if (relay_state == BC_MODULE_RELAY_STATE_UNKNOWN) {
+        bc_module_relay_set_state(&relay, false);
+    }
 }
 
 void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
@@ -34,13 +39,6 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
     (void) self;
     (void) event_param;
 
-    bc_module_relay_state_t relay_state = bc_module_relay_get_state(&relay);
-    
-    //Nastav rele na vypnuto
-    if (relay_state == BC_MODULE_RELAY_STATE_UNKNOWN) {
-        bc_module_relay_set_state(&relay, false);
-    }
-    
     //Pokud podržím button tak roluji na gateway = base, pokud jen stisknu tak vyvolám akci dle těla podmínky
     if (event == BC_BUTTON_EVENT_PRESS)
     {
@@ -53,7 +51,7 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
     else if (event == BC_BUTTON_EVENT_HOLD)
     {
         bc_radio_enroll_to_gateway();
-        bc_led_pulse(&led, 1000);
+        bc_led_set_mode(&led, BC_LED_MODE_OFF);
     }
 }
 
@@ -61,4 +59,9 @@ void radio_event_handler(bc_radio_event_t event, void *event_param)
 {
     (void) event_param;
     
+}
+
+void bc_radio_on_push_button(uint16_t *event_count)
+{
+    bc_led_set_mode(&led, BC_LED_MODE_TOGGLE);
 }
