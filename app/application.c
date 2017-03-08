@@ -10,6 +10,9 @@ bc_button_t button;
 
 void application_init(void)
 {
+    // Initialize USB talk
+    usb_talk_init();
+    
     // Initialize LED
     bc_led_init(&led, BC_GPIO_LED, false, false);
     bc_led_set_mode(&led, BC_LED_MODE_ON);

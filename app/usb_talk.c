@@ -4,6 +4,7 @@
 #include <jsmn.h>
 #include <base64.h>
 #include <bc_led.h>
+#include <application.h>
 // TODO
 // #include "bc_module_power.h"
 
@@ -197,6 +198,9 @@ static bool usb_talk_on_message_light_set(const char *buffer, int token_count, j
     {
         bc_led_set_mode(&led, BC_LED_MODE_OFF);
     }
+    static uint16_t event_count = 0;
+    bc_radio_pub_push_button(&event_count);
+    event_count++;
     return true;
 }
 
