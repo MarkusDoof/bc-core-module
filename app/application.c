@@ -1,4 +1,4 @@
-//REMOTE
+//REMOTE POWER
 #include <application.h>
 
 // LED instance
@@ -74,7 +74,18 @@ void radio_event_handler(bc_radio_event_t event, void *event_param)
 
 void bc_radio_on_push_button(uint16_t *event_count)
 {
-
+    
     bc_led_set_mode(&led, BC_LED_MODE_TOGGLE);
     
+}
+
+void bc_radio_on_irrigation_switch_on()
+{
+    bc_module_relay_set_state(&relay, true);
+    
+}
+
+void bc_radio_on_irrigation_switch_off()
+{
+    bc_module_relay_set_state(&relay, false);
 }
