@@ -8,7 +8,8 @@ bc_led_t led;
 bc_button_t button;
 
 // Relay instance
-bc_module_relay_t relay;
+bc_module_relay_t relay_primary;
+bc_module_relay_t relay_secondary;
 
 void application_init(void)
 {
@@ -26,11 +27,19 @@ void application_init(void)
     bc_radio_listen();
     
     //Inicialize relay
-    bc_module_relay_init(&relay);
+    bc_module_primary_relay_init(&relay_primary);
     //Nastav rele na vypnuto
-    bc_module_relay_state_t relay_state = bc_module_relay_get_state(&relay);
-    if (relay_state == BC_MODULE_RELAY_STATE_UNKNOWN) {
-        bc_module_relay_set_state(&relay, false);
+    bc_module_relay_state_t primary_relay_state = bc_module_relay_get_state(&relay_primary);
+    if (primary_relay_state == BC_MODULE_RELAY_STATE_UNKNOWN) {
+        bc_module_relay_set_state(&relay_primary, false);
+    }
+    
+    //Inicialize relay
+    bc_module_secondary_relay_init(&relay_secondary);
+    //Nastav rele na vypnuto
+    bc_module_relay_state_t secondary_relay_state = bc_module_relay_get_state(&relay_secondary);
+    if (secondary_relay_state == BC_MODULE_RELAY_STATE_UNKNOWN) {
+        bc_module_relay_set_state(&relay_secondary, false);
     }
     
 }
@@ -72,20 +81,22 @@ void radio_event_handler(bc_radio_event_t event, void *event_param)
     }
 }
 
-void bc_radio_on_push_button(uint16_t *event_count)
+void bc_radio_on_irrigation_primary_switch_on()
 {
-    
-    bc_led_set_mode(&led, BC_LED_MODE_TOGGLE);
-    
+    bc_module_relay_set_state(&relay_primary, true);
 }
 
-void bc_radio_on_irrigation_switch_on()
+void bc_radio_on_irrigation_primary_switch_off()
 {
-    bc_module_relay_set_state(&relay, true);
-    
+    bc_module_relay_set_state(&relay_primary, false);
 }
 
-void bc_radio_on_irrigation_switch_off()
+void bc_radio_on_irrigation_secondary_switch_on()
 {
-    bc_module_relay_set_state(&relay, false);
+    bc_module_relay_set_state(&relay_secondary, true);
+}
+
+void bc_radio_on_irrigation_secondary_switch_off()
+{
+    bc_module_relay_set_state(&relay_secondary, false);
 }
