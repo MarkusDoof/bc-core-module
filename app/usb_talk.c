@@ -26,7 +26,7 @@ bc_led_t led;
 static void _usb_talk_task(void *param);
 static void usb_talk_process_character(char character);
 static void usb_talk_process_message(char *message, size_t length);
-static bool usb_talk_on_message_light_set(const char *buffer, int token_count, jsmntok_t *tokens);
+static bool usb_talk_on_message_irrigation_set(const char *buffer, int token_count, jsmntok_t *tokens);
 static bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *value);
 static void usb_talk_send_string(const char *buffer);
 
@@ -161,14 +161,14 @@ static void usb_talk_process_message(char *message, size_t length)
         return;
     }
     
-    if (usb_talk_on_message_light_set((const char *) message, token_count, tokens))
+    if (usb_talk_on_message_irrigation_set((const char *) message, token_count, tokens))
     {
         return;
     }
 
 }
 
-static bool usb_talk_on_message_light_set(const char *buffer, int token_count, jsmntok_t *tokens)
+static bool usb_talk_on_message_irrigation_set(const char *buffer, int token_count, jsmntok_t *tokens)
 {
     if (token_count != 5)
     {
@@ -179,12 +179,28 @@ static bool usb_talk_on_message_light_set(const char *buffer, int token_count, j
     {
         return false;
     }
+    
+    
     //Pozor gateway oseká nodes takže v podmínce musí  být už jen toto
-    if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/light/-/set"))
+    if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation1/-/set"))
     {
-        return false;
+        if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation2/-/set"))
+        {
+            return false;
+        }
     }
     
+    //Ukazatel jestli jde o primární nebo sekundární relé
+    bool primary_switch = true;
+    if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation1/-/set"))
+    {
+        primary_switch = true;
+    }
+    if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation2/-/set"))
+    {
+        primary_switch = false;
+    }
+
     if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_PAYLOAD_KEY], "state"))
     {
         return false;
@@ -192,15 +208,27 @@ static bool usb_talk_on_message_light_set(const char *buffer, int token_count, j
     
     if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_PAYLOAD_VALUE], "on"))
     {
+        if(primary_switch)
+        {
+            bc_radio_pub_primary_irrigation_switch_on();
+        } else
+        {
+            bc_radio_pub_secondary_irrigation_switch_on();
+        }
         bc_led_set_mode(&led, BC_LED_MODE_ON);
     }
     else if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_PAYLOAD_VALUE], "off"))
     {
+        if(primary_switch)
+        {
+            bc_radio_pub_primary_irrigation_switch_off();
+        } else
+        {
+            bc_radio_pub_secondary_irrigation_switch_off();
+        }
         bc_led_set_mode(&led, BC_LED_MODE_OFF);
     }
-    static uint16_t event_count = 0;
-    bc_radio_pub_push_button(&event_count);
-    event_count++;
+    
     return true;
 }
 

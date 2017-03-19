@@ -30,7 +30,7 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
     (void) self;
     (void) event_param;
     
-    //Pokud podržím button tak roluji na gateway = base, pokud jen stisknu tak vyvolám akci dle těla podmínky
+    //Pokud podržím button tak roluji na gateway, pokud jen stisknu tak vyvolám akci dle těla podmínky
     if (event == BC_BUTTON_EVENT_PRESS)
     {
         bc_led_pulse(&led, 100);
