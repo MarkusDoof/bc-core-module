@@ -4,6 +4,7 @@
 #include <jsmn.h>
 #include <base64.h>
 #include <bc_led.h>
+#include <application.h>
 // TODO
 // #include "bc_module_power.h"
 
@@ -25,16 +26,16 @@ bc_led_t led;
 static void _usb_talk_task(void *param);
 static void usb_talk_process_character(char character);
 static void usb_talk_process_message(char *message, size_t length);
-static bool usb_talk_on_message_light_set(const char *buffer, int token_count, jsmntok_t *tokens);
+static bool usb_talk_on_message_irrigation_set(const char *buffer, int token_count, jsmntok_t *tokens);
 static bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *value);
 static void usb_talk_send_string(const char *buffer);
 
 void usb_talk_init()
 {
     memset(&usb_talk, 0, sizeof(usb_talk));
-    
+
     bc_usb_cdc_init();
-    
+
     bc_scheduler_register(_usb_talk_task, NULL, 0);
 }
 
@@ -50,48 +51,48 @@ void usb_talk_publish_push_button(const char *prefix, uint16_t *event_count)
         snprintf(usb_talk.tx_buffer, sizeof(usb_talk.tx_buffer), "[\"%spush-button/-\", {\"event-count\": null}]\n",
                  prefix);
     }
-    
+
     usb_talk_send_string((const char *) usb_talk.tx_buffer);
 }
 
 void usb_talk_publish_simple_push_button(const char *topic)
 {
-    
+
     snprintf(usb_talk.tx_buffer, sizeof(usb_talk.tx_buffer), "[\"%s\", {\"\"}]\n", topic);
     usb_talk_send_string((const char *) usb_talk.tx_buffer);
 }
 
 void usb_talk_publish_input_change(const char *prefix, uint16_t *value)
 {
-    
-    snprintf(usb_talk.tx_buffer, sizeof(usb_talk.tx_buffer),
-             "[\"%sinput-change/-\", {\"value\": %" PRIu16 "}]\n", prefix, *value);
-    
-    
+
+	snprintf(usb_talk.tx_buffer, sizeof(usb_talk.tx_buffer),
+			 "[\"%sinput-change/-\", {\"value\": %" PRIu16 "}]\n", prefix, *value);
+
+
     usb_talk_send_string((const char *) usb_talk.tx_buffer);
 }
 
 static void _usb_talk_task(void *param)
 {
     (void) param;
-    
+
     while (true)
     {
         static uint8_t buffer[16];
-        
+
         size_t length = bc_usb_cdc_read(buffer, sizeof(buffer));
-        
+
         if (length == 0)
         {
             break;
         }
-        
+
         for (size_t i = 0; i < length; i++)
         {
             usb_talk_process_character((char) buffer[i]);
         }
     }
-    
+
     // TODO
     bc_scheduler_plan_current_now();
 }
@@ -134,15 +135,10 @@ static void usb_talk_process_message(char *message, size_t length)
     
     static jsmn_parser parser;
     static jsmntok_t tokens[16];
-    
+
     jsmn_init(&parser);
     
     int token_count = jsmn_parse(&parser, (const char *) message, length, tokens, 16);
-    
-    //    memset(debug_message, 0, sizeof(debug_message));
-    //    snprintf(debug_message, sizeof(debug_message), "message:%s, token count:%d \n", message, token_count);
-    //    usb_talk_send_string(debug_message);
-    
     
     if (token_count < 3)
     {
@@ -165,14 +161,14 @@ static void usb_talk_process_message(char *message, size_t length)
         return;
     }
     
-    if (usb_talk_on_message_light_set((const char *) message, token_count, tokens))
+    if (usb_talk_on_message_irrigation_set((const char *) message, token_count, tokens))
     {
         return;
     }
-    
+
 }
 
-static bool usb_talk_on_message_light_set(const char *buffer, int token_count, jsmntok_t *tokens)
+static bool usb_talk_on_message_irrigation_set(const char *buffer, int token_count, jsmntok_t *tokens)
 {
     if (token_count != 5)
     {
@@ -183,12 +179,28 @@ static bool usb_talk_on_message_light_set(const char *buffer, int token_count, j
     {
         return false;
     }
+    
+    
     //Pozor gateway oseká nodes takže v podmínce musí  být už jen toto
-    if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation/-/set"))
+    if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation1/-/set"))
     {
-        return false;
+        if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation2/-/set"))
+        {
+            return false;
+        }
     }
     
+    //Ukazatel jestli jde o primární nebo sekundární relé
+    bool primary_switch = true;
+    if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation1/-/set"))
+    {
+        primary_switch = true;
+    }
+    if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_TOPIC], "base/irrigation2/-/set"))
+    {
+        primary_switch = false;
+    }
+
     if (!usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_PAYLOAD_KEY], "state"))
     {
         return false;
@@ -196,31 +208,46 @@ static bool usb_talk_on_message_light_set(const char *buffer, int token_count, j
     
     if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_PAYLOAD_VALUE], "on"))
     {
+        if(primary_switch)
+        {
+            bc_radio_pub_primary_irrigation_switch_on();
+        } else
+        {
+            bc_radio_pub_secondary_irrigation_switch_on();
+        }
         bc_led_set_mode(&led, BC_LED_MODE_ON);
     }
     else if (usb_talk_is_string_token_equal(buffer, &tokens[USB_TALK_TOKEN_PAYLOAD_VALUE], "off"))
     {
+        if(primary_switch)
+        {
+            bc_radio_pub_primary_irrigation_switch_off();
+        } else
+        {
+            bc_radio_pub_secondary_irrigation_switch_off();
+        }
         bc_led_set_mode(&led, BC_LED_MODE_OFF);
     }
+    
     return true;
 }
 
 static bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *value)
 {
     size_t token_length;
-    
+
     token_length = (size_t) (token->end - token->start);
-    
+
     if (strlen(value) != token_length)
     {
         return false;
     }
-    
+
     if (strncmp(value, &buffer[token->start], token_length) != 0)
     {
         return false;
     }
-    
+
     return true;
 }
 
