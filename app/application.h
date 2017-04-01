@@ -23,6 +23,11 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
 void radio_event_handler(bc_radio_event_t event, void *event_param);
 void reset_switches();
 void bc_irrigation_valve_init(bc_irrigation_valve *valve);
-void estimate_valve_state();
+void bc_irrigation_valve_set_state(bc_irrigation_valve *self, bc_irrigation_valve_state_t valve_state);
+
+void bc_radio_on_irrigation_primary_switch_on();
+void bc_radio_on_irrigation_primary_switch_off();
+void bc_radio_on_irrigation_secondary_switch_on();
+void bc_radio_on_irrigation_secondary_switch_off();
 
 #endif // _APPLICATION_H

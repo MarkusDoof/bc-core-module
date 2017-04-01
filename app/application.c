@@ -44,11 +44,19 @@ void application_init(void)
     bc_module_power_init();
     
     //Nastav vsechna rele na false neboli do zakladniho stavu
-    reset_switches();
+    //reset_switches();
+    bc_module_power_relay_set_state(false);
+    bc_module_relay_pulse(&relay_primary, false, 1000);
+    bc_module_relay_pulse(&relay_secondary, false, 1000);
+    
     
     //Inicializace objektu valve
     bc_irrigation_valve_init(&valve_1);
     bc_irrigation_valve_init(&valve_2);
+    
+    //Nastavení pomocného objektu
+    bc_irrigation_valve_set_state(&valve_1, VALVE_CLOSED);
+    bc_irrigation_valve_set_state(&valve_2, VALVE_CLOSED);
     
     relays_state = 0;
     
@@ -68,30 +76,16 @@ void button_event_handler(bc_button_t *self, bc_button_event_t event, void *even
         
         if (relays_state == 1)
         {
-            estimate_valve_state();
-            reset_switches();
-            //TO-DO Wait 1s
-            bc_module_power_relay_set_state(true);
-            bc_module_relay_set_state(&relay_primary, true);
-            if (valve_2._valve_state == VALVE_OPEN)
-            {
-                bc_module_relay_set_state(&relay_secondary, true);
-            }
+            bc_radio_on_irrigation_primary_switch_on();
         } else if (relays_state == 2)
         {
-            estimate_valve_state();
-            reset_switches();
-            //TO-DO Wait 1s
-            bc_module_power_relay_set_state(true);
-            bc_module_relay_set_state(&relay_secondary, true);
-            if (valve_1._valve_state == VALVE_OPEN)
-            {
-                bc_module_relay_set_state(&relay_primary, true);
-            }
+            bc_radio_on_irrigation_primary_switch_off();
         } else if (relays_state == 3)
         {
-            estimate_valve_state();
-            reset_switches();
+            bc_radio_on_irrigation_secondary_switch_on();
+        } else if (relays_state == 4)
+        {
+            bc_radio_on_irrigation_secondary_switch_off();
         } else
         {
             relays_state = 0;
@@ -123,9 +117,10 @@ void radio_event_handler(bc_radio_event_t event, void *event_param)
 
 void reset_switches()
 {
-    bc_module_relay_set_state(&relay_primary, false);
-    bc_module_relay_set_state(&relay_secondary, false);
-    bc_module_power_relay_set_state(false);
+    //bc_module_relay_set_state(&relay_primary, false);
+    //bc_module_relay_set_state(&relay_secondary, false);
+    //bc_module_power_relay_set_state(false);
+    
 }
 
 void bc_irrigation_valve_init(bc_irrigation_valve *self)
@@ -140,92 +135,48 @@ void bc_irrigation_valve_set_state(bc_irrigation_valve *self, bc_irrigation_valv
     self->_valve_state = valve_state;
 }
 
-void estimate_valve_state()
-{
-    bc_module_relay_state_t s1_state = bc_module_relay_get_state(&relay_primary);
-    bc_module_relay_state_t s2_state = bc_module_relay_get_state(&relay_secondary);
-    bool s1 = false;
-    bool s2 = false;
-    bool ms = bc_module_power_relay_get_state();
-    if(s1_state == BC_MODULE_RELAY_STATE_TRUE)
-    {
-        s1 = true;
-    }
-    if(s2_state == BC_MODULE_RELAY_STATE_TRUE)
-    {
-        s2 = true;
-    }
-    
-    if (ms)
-    {
-        if (s1)
-        {
-            bc_irrigation_valve_set_state(&valve_1, VALVE_OPEN);
-        } else
-        {
-            bc_irrigation_valve_set_state(&valve_1, VALVE_CLOSED);
-        }
-        if (s2)
-        {
-            bc_irrigation_valve_set_state(&valve_2, VALVE_OPEN);
-        } else
-        {
-            bc_irrigation_valve_set_state(&valve_2, VALVE_CLOSED);
-        }
-    } else
-    {
-        bc_irrigation_valve_set_state(&valve_1, VALVE_CLOSED);
-        bc_irrigation_valve_set_state(&valve_2, VALVE_CLOSED);
-    }
-    
-}
-
 void bc_radio_on_irrigation_primary_switch_on()
 {
-    estimate_valve_state();
-    reset_switches();
-    //TO-DO Wait 1s
     bc_module_power_relay_set_state(true);
-    bc_module_relay_set_state(&relay_primary, true);
+    bc_module_relay_pulse(&relay_primary, true, 1000);
     if (valve_2._valve_state == VALVE_OPEN)
     {
-        bc_module_relay_set_state(&relay_secondary, true);
+        bc_module_relay_pulse(&relay_secondary, true, 1000);
+    } else
+    {
+        bc_module_relay_set_state(&relay_secondary, false);
     }
+    bc_irrigation_valve_set_state(&valve_1, VALVE_OPEN);
 }
 
 void bc_radio_on_irrigation_primary_switch_off()
 {
-    estimate_valve_state();
-    reset_switches();
-    //TO-DO Wait 1s
-    if (valve_2._valve_state == VALVE_OPEN)
-    {
-        bc_module_power_relay_set_state(true);
-        bc_module_relay_set_state(&relay_secondary, true);
-    }
+    bc_module_power_relay_set_state(false);
+    bc_module_relay_pulse(&relay_primary, false, 1000);
+    bc_module_relay_pulse(&relay_secondary, false, 1000);
+    bc_irrigation_valve_set_state(&valve_1, VALVE_CLOSED);
+    bc_irrigation_valve_set_state(&valve_2, VALVE_CLOSED);
 }
 
 void bc_radio_on_irrigation_secondary_switch_on()
 {
-    estimate_valve_state();
-    reset_switches();
-    //TO-DO Wait 1s
     bc_module_power_relay_set_state(true);
-    bc_module_relay_set_state(&relay_secondary, true);
     if (valve_1._valve_state == VALVE_OPEN)
     {
-        bc_module_relay_set_state(&relay_primary, true);
+        bc_module_relay_pulse(&relay_primary, true, 1000);
+    } else
+    {
+        bc_module_relay_set_state(&relay_primary, false);
     }
+    bc_module_relay_pulse(&relay_secondary, true, 1000);
+    bc_irrigation_valve_set_state(&valve_2, VALVE_OPEN);
 }
 
 void bc_radio_on_irrigation_secondary_switch_off()
 {
-    estimate_valve_state();
-    reset_switches();
-    //TO-DO Wait 1s
-    if (valve_1._valve_state == VALVE_OPEN)
-    {
-        bc_module_power_relay_set_state(true);
-        bc_module_relay_set_state(&relay_primary, true);
-    }
+    bc_module_power_relay_set_state(false);
+    bc_module_relay_pulse(&relay_primary, false, 1000);
+    bc_module_relay_pulse(&relay_secondary, false, 1000);
+    bc_irrigation_valve_set_state(&valve_1, VALVE_CLOSED);
+    bc_irrigation_valve_set_state(&valve_2, VALVE_CLOSED);
 }
